@@ -1,5 +1,9 @@
 pipeline{
     agent any
+    environment{
+        APP_DEST_PATH = "/var/www/${env.APP_FOLDER_NAME}"
+        APP_DEST_PATH_CHECK = fileExists "${env.APP_DEST_PATH}"
+    }
     stages{
         stage("Fetch code from git"){
             steps{
@@ -11,6 +15,13 @@ pipeline{
                 sh "echo 'Unit test'"
             }
         }
+        stage("Setting up Environment") {
+            when { expression { APP_DEST_PATH_CHECK == "true"} }
+            steps {
+                sh "sudo rm -R ${env.APP_DEST_PATH}"
+                sh "pwd"
+            }
+        }
         stage("Build"){
             steps{
                 sh "npm run build"
@@ -20,7 +31,22 @@ pipeline{
                     echo "Done building"
                 }
                 success{
-                    sh "npm run start"
+                    echo "========Building success!========"
+                }
+                failure{
+                    echo "========A execution failed========"
+                }
+            }
+        }
+        stage("Deployment"){
+            steps{
+                sh "sudo cp -R . ${env.APP_DEST_PATH}"
+            }
+            post{
+                always{
+                    echo "Done building"
+                }
+                success{
                     echo "========Building success!========"
                 }
                 failure{
